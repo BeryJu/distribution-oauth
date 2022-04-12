@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -34,38 +37,46 @@ func main() {
 	http.ListenAndServe("0.0.0.0:9001", m)
 }
 
+func traceRequest(r *http.Request) *http.Request {
+	var start, connect, dns, tlsHandshake time.Time
+	trace := &httptrace.ClientTrace{
+		DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
+		DNSDone: func(ddi httptrace.DNSDoneInfo) {
+			log.WithField("component", "upstream_request").WithField("time", time.Since(dns)).Trace("DNS Done")
+		},
+		TLSHandshakeStart: func() { tlsHandshake = time.Now() },
+		TLSHandshakeDone: func(cs tls.ConnectionState, err error) {
+			log.WithField("component", "upstream_request").WithField("time", time.Since(tlsHandshake)).Trace("TLS Done")
+		},
+		ConnectStart: func(network, addr string) { connect = time.Now() },
+		ConnectDone: func(network, addr string, err error) {
+			log.WithField("component", "upstream_request").WithField("time", time.Since(connect)).Trace("Connect time")
+		},
+		GotFirstResponseByte: func() {
+			log.WithField("component", "upstream_request").WithField("time", time.Since(start)).Trace("Time to first byte")
+		},
+	}
+	return r.WithContext(httptrace.WithClientTrace(r.Context(), trace))
+}
+
 func handler(tokenUrl string, clientId string) func(http.ResponseWriter, *http.Request) {
 	specialScope := os.Getenv("SCOPE")
 	return func(w http.ResponseWriter, r *http.Request) {
 		service := r.URL.Query().Get("service")
 		scope := r.URL.Query().Get("scope")
 		offline := r.URL.Query().Get("offline_token")
-		typ := ""
-		name := ""
-		actions := make([]string, 0)
-		if scope != "" {
-			params := strings.Split(scope, ":")
-			if len(params) < 3 {
-				panic("too few params")
-			}
-			typ = params[0]
-			name = params[1]
-			actions = strings.Split(params[2], ",")
-		}
-
-		log.WithFields(log.Fields{
-			"service": service,
-			"type":    typ,
-			"name":    name,
-			"actions": actions,
-			"scope":   scope,
-		}).Info("token request")
 
 		user, password, ok := r.BasicAuth()
 		if !ok {
 			http.Error(w, "Authorization required", http.StatusUnauthorized)
 			return
 		}
+
+		log.WithFields(log.Fields{
+			"service": service,
+			"scope":   scope,
+			"user":    user,
+		}).Info("token request")
 
 		data := url.Values{
 			"client_id":  []string{clientId},
@@ -79,6 +90,7 @@ func handler(tokenUrl string, clientId string) func(http.ResponseWriter, *http.R
 			log.WithError(err).Warning("failed to create token request")
 			return
 		}
+		req = traceRequest(req)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 		res, err := http.DefaultClient.Do(req)
