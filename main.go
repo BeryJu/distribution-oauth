@@ -39,21 +39,22 @@ func main() {
 
 func traceRequest(r *http.Request) *http.Request {
 	var start, connect, dns, tlsHandshake time.Time
+	l := log.WithField("component", "upstream_request")
 	trace := &httptrace.ClientTrace{
 		DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
 		DNSDone: func(ddi httptrace.DNSDoneInfo) {
-			log.WithField("component", "upstream_request").WithField("time", time.Since(dns)).Trace("DNS Done")
+			l.WithField("time_ms", time.Since(dns).Milliseconds()).Trace("DNS Done")
 		},
 		TLSHandshakeStart: func() { tlsHandshake = time.Now() },
 		TLSHandshakeDone: func(cs tls.ConnectionState, err error) {
-			log.WithField("component", "upstream_request").WithField("time", time.Since(tlsHandshake)).Trace("TLS Done")
+			l.WithField("time_ms", time.Since(tlsHandshake).Milliseconds()).Trace("TLS Done")
 		},
 		ConnectStart: func(network, addr string) { connect = time.Now() },
 		ConnectDone: func(network, addr string, err error) {
-			log.WithField("component", "upstream_request").WithField("time", time.Since(connect)).Trace("Connect time")
+			l.WithField("time_ms", time.Since(connect).Milliseconds()).Trace("Connect time")
 		},
 		GotFirstResponseByte: func() {
-			log.WithField("component", "upstream_request").WithField("time", time.Since(start)).Trace("Time to first byte")
+			l.WithField("time_ms", time.Since(start).Milliseconds()).Trace("Time to first byte")
 		},
 	}
 	return r.WithContext(httptrace.WithClientTrace(r.Context(), trace))
@@ -76,6 +77,7 @@ func handler(tokenUrl string, clientId string) func(http.ResponseWriter, *http.R
 			"service": service,
 			"scope":   scope,
 			"user":    user,
+			"remote":  r.Header.Get("X-Forwarded-For"),
 		}).Info("token request")
 
 		data := url.Values{
