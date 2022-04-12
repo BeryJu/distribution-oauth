@@ -27,6 +27,9 @@ func main() {
 
 	m := http.NewServeMux()
 	m.HandleFunc("/token", handler(tokenUrl, clientId))
+	m.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(204)
+	})
 	log.Debug("listening on :9001")
 	http.ListenAndServe("0.0.0.0:9001", m)
 }
