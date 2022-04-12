@@ -3,12 +3,18 @@
 Adapt (semi-)standard OAuth to Docker's token system.
 
 Needs custom registry build because https://github.com/distribution/distribution/issues/2875
+(See ghcr.io/beryju/distribution:jwt)
 
 ## Env variables
 
-`TOKEN_URL`: URL to send POST Token request to
-`CLIENT_ID`: OAuth Client ID
-`SCOPE`: Special scope to append to requests
+- `TOKEN_URL`: URL to send POST Token request to
+- `CLIENT_ID`: OAuth Client ID
+- `SCOPE`: Special scope to append to requests
+
+## Todo
+
+- Add support for `client_assertion_type` to allow auth via JWT (reserved username)
+- Add anonymous support (either static credentials or machine JWT (k8s SA JWT))
 
 ## authentik setup
 
