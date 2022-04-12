@@ -57,6 +57,7 @@ func traceRequest(r *http.Request) *http.Request {
 			l.WithField("time_ms", time.Since(start).Milliseconds()).Trace("Time to first byte")
 		},
 	}
+	start = time.Now()
 	return r.WithContext(httptrace.WithClientTrace(r.Context(), trace))
 }
 
@@ -92,9 +93,9 @@ func handler(tokenUrl string, clientId string) func(http.ResponseWriter, *http.R
 			log.WithError(err).Warning("failed to create token request")
 			return
 		}
-		req = traceRequest(req)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+		req = traceRequest(req)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.WithError(err).Warning("failed to send token request")
