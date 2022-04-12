@@ -1,4 +1,4 @@
-module beryju.org/docker-to-oauth
+module beryju.org/distribution-oauth
 
 go 1.18
 

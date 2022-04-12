@@ -1,4 +1,4 @@
-# docker-to-oauth
+# distribution-oauth
 
 Adapt (semi-)standard OAuth to Docker's token system.
 

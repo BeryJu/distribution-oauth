@@ -32,8 +32,8 @@ jobs:
       uses: docker/build-push-action@v2.6.1
       with:
         tags: |
-          ghcr.io/beryju/docker-to-oauth:latest
-          ghcr.io/beryju/docker-to-oauth:latest-${{ steps.vars.outputs.timestamp }}-${{ steps.vars.outputs.sha }}
+          ghcr.io/beryju/distribution-oauth:latest
+          ghcr.io/beryju/distribution-oauth:latest-${{ steps.vars.outputs.timestamp }}-${{ steps.vars.outputs.sha }}
         push: ${{ github.ref == 'refs/heads/main' }}
         platforms: linux/amd64,linux/arm64
         build-args: |
