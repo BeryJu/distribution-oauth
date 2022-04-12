@@ -94,7 +94,8 @@ func handler(tokenUrl string, clientId string) func(http.ResponseWriter, *http.R
 			return
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+		req.Header.Set("Content-Length", strconv.Itoa(len(data.Encode())))
+		req.Header.Set("User-Agent", r.UserAgent())
 		req = traceRequest(req)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
