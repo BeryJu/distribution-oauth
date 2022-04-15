@@ -10,6 +10,8 @@ Needs custom registry build because https://github.com/distribution/distribution
 - `TOKEN_URL`: URL to send POST Token request to
 - `CLIENT_ID`: OAuth Client ID
 - `SCOPE`: Special scope to append to requests
+- `ANON_USERNAME`: Credentials to be used when the client doesn't send any (optional)
+- `ANON_PASSWORD`: Credentials to be used when the client doesn't send any (optional)
 
 ## Todo
 
