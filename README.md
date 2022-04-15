@@ -12,6 +12,7 @@ Needs custom registry build because https://github.com/distribution/distribution
 - `SCOPE`: Special scope to append to requests
 - `ANON_USERNAME`: Credentials to be used when the client doesn't send any (optional)
 - `ANON_PASSWORD`: Credentials to be used when the client doesn't send any (optional)
+- `ANON_KUBE_JWT`: (Requires kubernetes) If set, will use the current pod's service account as anonymous credentials
 
 ## Todo
 

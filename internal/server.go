@@ -3,6 +3,7 @@ package internal
 import (
 	"crypto/tls"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
@@ -28,6 +29,9 @@ type Server struct {
 
 	anonUsername string
 	anonPassword string
+	anonKubeJWT  bool
+
+	kubeJWT string
 
 	m *mux.Router
 	l *log.Entry
@@ -42,8 +46,13 @@ func New() *Server {
 		scope:        os.Getenv("SCOPE"),
 		anonUsername: os.Getenv("ANON_USERNAME"),
 		anonPassword: os.Getenv("ANON_PASSWORD"),
+		anonKubeJWT:  os.Getenv("ANON_KUBE_JWT") != "",
 		m:            m,
 		l:            log.WithField("component", "server"),
+	}
+
+	if s.anonKubeJWT {
+		s.kubeJWT = s.getKubeJWT()
 	}
 
 	m.Use(NewLoggingHandler(s.l, nil))
@@ -83,14 +92,41 @@ func traceRequest(r *http.Request) *http.Request {
 	return r.WithContext(httptrace.WithClientTrace(r.Context(), trace))
 }
 
+func (s *Server) getKubeJWT() string {
+	f, err := os.Open("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		s.l.WithError(err).Warning("failed to get kube jwt")
+		return ""
+	}
+	defer f.Close()
+	body, err := ioutil.ReadAll(f)
+	if err != nil {
+		s.l.WithError(err).Warning("failed to read kube jwt")
+		return ""
+	}
+	return string(body)
+}
+
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	service := r.URL.Query().Get("service")
 	scope := r.URL.Query().Get("scope")
 	offline := r.URL.Query().Get("offline_token")
 
 	user, password, ok := r.BasicAuth()
+	data := url.Values{
+		"client_id":  []string{s.clientId},
+		"grant_type": []string{"client_credentials"},
+		"username":   []string{user},
+		"password":   []string{password},
+		"scope":      []string{scope + " " + s.scope},
+	}
 	if !ok {
-		if s.anonUsername != "" && s.anonPassword != "" {
+		if s.anonKubeJWT {
+			data["client_assertion_type"] = []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"}
+			data["client_assertion"] = []string{s.kubeJWT}
+			delete(data, "username")
+			delete(data, "password")
+		} else if s.anonUsername != "" && s.anonPassword != "" {
 			user = s.anonUsername
 			password = s.anonPassword
 		} else {
@@ -106,13 +142,6 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		"remote":  r.Header.Get("X-Forwarded-For"),
 	}).Info("token request")
 
-	data := url.Values{
-		"client_id":  []string{s.clientId},
-		"grant_type": []string{"client_credentials"},
-		"username":   []string{user},
-		"password":   []string{password},
-		"scope":      []string{scope + " " + s.scope},
-	}
 	req, err := http.NewRequest("POST", s.tokenUrl, strings.NewReader(data.Encode()))
 	if err != nil {
 		s.l.WithError(err).Warning("failed to create token request")
