@@ -1,0 +1,24 @@
+version: '3.5'
+
+services:
+  registry:
+    image: ghcr.io/beryju/registry:jwt
+    ports:
+      - 5001:5000
+    volumes:
+      - ./trusted.pem:/etc/trusted.pem
+    environment:
+      REGISTRY_AUTH_TOKEN_REALM: http://localhost:9001/token
+      REGISTRY_AUTH_TOKEN_SERVICE: 41d72a15a3fbd681f3405fa1d9cf252defbf7693
+      REGISTRY_AUTH_TOKEN_ISSUER: http://foo:9000/application/o/docker/
+      REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: /etc/trusted.pem
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_SECRET: test
+  oauth:
+    image: ghcr.io/beryju/distribution-oauth:latest
+    ports:
+      - 9001:9001
+    environment:
+      TOKEN_URL: http://foo:9000/application/o/token/
+      CLIENT_ID: 41d72a15a3fbd681f3405fa1d9cf252defbf7693
+      SCOPE: docker
