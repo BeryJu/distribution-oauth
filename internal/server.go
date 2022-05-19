@@ -27,9 +27,10 @@ type Server struct {
 	tokenUrl string
 	scope    string
 
-	anonUsername string
-	anonPassword string
-	anonKubeJWT  bool
+	anonUsername    string
+	anonPassword    string
+	anonKubeJWT     bool
+	passJWTUsername string
 
 	kubeJWT string
 
@@ -41,14 +42,15 @@ func New() *Server {
 	m := mux.NewRouter()
 
 	s := &Server{
-		clientId:     os.Getenv("CLIENT_ID"),
-		tokenUrl:     os.Getenv("TOKEN_URL"),
-		scope:        os.Getenv("SCOPE"),
-		anonUsername: os.Getenv("ANON_USERNAME"),
-		anonPassword: os.Getenv("ANON_PASSWORD"),
-		anonKubeJWT:  os.Getenv("ANON_KUBE_JWT") != "",
-		m:            m,
-		l:            log.WithField("component", "server"),
+		clientId:        os.Getenv("CLIENT_ID"),
+		tokenUrl:        os.Getenv("TOKEN_URL"),
+		scope:           os.Getenv("SCOPE"),
+		anonUsername:    os.Getenv("ANON_USERNAME"),
+		anonPassword:    os.Getenv("ANON_PASSWORD"),
+		anonKubeJWT:     os.Getenv("ANON_KUBE_JWT") != "",
+		passJWTUsername: os.Getenv("PASS_JWT_USERNAME"),
+		m:               m,
+		l:               log.WithField("component", "server"),
 	}
 
 	if s.anonKubeJWT {
@@ -133,6 +135,12 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Authorization required", http.StatusUnauthorized)
 			return
 		}
+	}
+	if s.passJWTUsername != "" && user == s.passJWTUsername {
+		data["client_assertion_type"] = []string{"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"}
+		data["client_assertion"] = []string{password}
+		delete(data, "username")
+		delete(data, "password")
 	}
 
 	s.l.WithFields(log.Fields{
