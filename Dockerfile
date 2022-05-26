@@ -16,5 +16,6 @@ FROM gcr.io/distroless/static-debian11:debug
 COPY --from=builder /go/bin/docker-oauth /docker-oauth
 
 EXPOSE 8001
+ENV LOG_LEVEL=info
 
 ENTRYPOINT [ "/docker-oauth" ]

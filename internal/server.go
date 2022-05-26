@@ -116,6 +116,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	offline := r.URL.Query().Get("offline_token")
 
 	user, password, ok := r.BasicAuth()
+	log.WithField("user", user).WithField("password", password).Trace("tracing credentials")
 	data := url.Values{
 		"client_id":  []string{s.clientId},
 		"grant_type": []string{"client_credentials"},

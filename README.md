@@ -14,11 +14,7 @@ Needs custom registry build because https://github.com/distribution/distribution
 - `ANON_PASSWORD`: Credentials to be used when the client doesn't send any (optional)
 - `ANON_KUBE_JWT`: (Requires kubernetes) If set, will use the current pod's service account as anonymous credentials
 - `PASS_JWT_USERNAME`: Username clients can use to pass a JWT directly as password (optional)
-
-## Todo
-
-- Add support for `client_assertion_type` to allow auth via JWT (reserved username)
-- Add anonymous support (either static credentials or machine JWT (k8s SA JWT))
+- `LOG_LEVEL`: Log level, defaults to info, can be set to trace which will print out credentials for debugging
 
 ## authentik setup
 
