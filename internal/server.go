@@ -56,12 +56,13 @@ func New() *Server {
 	if s.anonKubeJWT {
 		s.kubeJWT = s.getKubeJWT()
 	}
+	sm := m.NewRoute().Subrouter()
+	sm.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(204)
+	})
 
 	m.Use(NewLoggingHandler(s.l, nil))
 	m.HandleFunc("/token", s.handler)
-	m.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(204)
-	})
 	return s
 }
 
