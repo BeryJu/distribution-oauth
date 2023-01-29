@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
@@ -14,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,11 +37,17 @@ type Server struct {
 	kubeJWT string
 
 	m *mux.Router
+	s sessions.Store
 	l *log.Entry
 }
 
 func New() *Server {
 	m := mux.NewRouter()
+	key := os.Getenv("SESSION_KEY")
+	if key == "" {
+		key = string(securecookie.GenerateRandomKey(40))
+	}
+	sess := sessions.NewCookieStore([]byte(key))
 
 	s := &Server{
 		clientId:        os.Getenv("CLIENT_ID"),
@@ -51,6 +58,7 @@ func New() *Server {
 		anonKubeJWT:     os.Getenv("ANON_KUBE_JWT") != "",
 		passJWTUsername: os.Getenv("PASS_JWT_USERNAME"),
 		m:               m,
+		s:               sess,
 		l:               log.WithField("component", "server"),
 	}
 
@@ -103,7 +111,7 @@ func (s *Server) getKubeJWT() string {
 		return ""
 	}
 	defer f.Close()
-	body, err := ioutil.ReadAll(f)
+	body, err := io.ReadAll(f)
 	if err != nil {
 		s.l.WithError(err).Warning("failed to read kube jwt")
 		return ""
@@ -111,12 +119,28 @@ func (s *Server) getKubeJWT() string {
 	return string(body)
 }
 
+func (s *Server) getAuth(r *http.Request) (string, string, bool) {
+	user, password, ok := r.BasicAuth()
+	if ok {
+		return user, password, true
+	}
+	session, _ := s.s.Get(r, "distribution-jwt")
+	ruser, uok := session.Values["username"]
+	rpassword, pok := session.Values["password"]
+	if uok && pok {
+		user = ruser.(string)
+		password = rpassword.(string)
+		return user, password, true
+	}
+	return "", "", false
+}
+
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	service := r.URL.Query().Get("service")
 	scope := r.URL.Query().Get("scope")
 	offline := r.URL.Query().Get("offline_token")
 
-	user, password, ok := r.BasicAuth()
+	user, password, ok := s.getAuth(r)
 	log.WithField("user", user).WithField("password", password).Trace("tracing credentials")
 	data := url.Values{
 		"client_id":  []string{s.clientId},
@@ -178,6 +202,15 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(res.StatusCode)
 		w.Write(body)
 		return
+	} else {
+		// Successful response
+		session, _ := s.s.Get(r, "distribution-jwt")
+		session.Values["username"] = user
+		session.Values["password"] = password
+		err := session.Save(r, w)
+		if err != nil {
+			s.l.WithError(err).Warning("failed to save session")
+		}
 	}
 	var tr TokenResponse
 	err = json.NewDecoder(res.Body).Decode(&tr)

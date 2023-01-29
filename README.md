@@ -10,11 +10,15 @@ Needs custom registry build because https://github.com/distribution/distribution
 - `TOKEN_URL`: URL to send POST Token request to
 - `CLIENT_ID`: OAuth Client ID
 - `SCOPE`: Special scope to append to requests
+- `LOG_LEVEL`: Log level, defaults to info, can be set to trace which will print out credentials for debugging
+
+*Optional variables*
+
 - `ANON_USERNAME`: Credentials to be used when the client doesn't send any (optional)
 - `ANON_PASSWORD`: Credentials to be used when the client doesn't send any (optional)
 - `ANON_KUBE_JWT`: (Requires kubernetes) If set, will use the current pod's service account as anonymous credentials
 - `PASS_JWT_USERNAME`: Username clients can use to pass a JWT directly as password (optional)
-- `LOG_LEVEL`: Log level, defaults to info, can be set to trace which will print out credentials for debugging
+- `SESSION_KEY`: Secret key used for sessions (only used when registry is used in a browser, for example https://github.com/Joxit/docker-registry-ui)
 
 ## authentik setup
 
