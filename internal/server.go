@@ -134,6 +134,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			user = s.anonUsername
 			password = s.anonPassword
 		} else {
+			w.Header().Set("WWW-Authenticate", `Basic realm="distribution-oauth", charset="UTF-8"`)
 			http.Error(w, "Authorization required", http.StatusUnauthorized)
 			return
 		}
