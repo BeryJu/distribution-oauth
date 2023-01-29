@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-	log.SetReportCaller(true)
 	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
 	case "trace":
 		log.SetLevel(log.TraceLevel)

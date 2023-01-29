@@ -3,6 +3,7 @@ package internal
 import (
 	"crypto/tls"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
@@ -165,6 +166,17 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		s.l.WithError(err).Warning("failed to send token request")
+		return
+	}
+	if res.StatusCode > 399 {
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			s.l.WithError(err).Warning("failed to read body")
+			return
+		}
+		s.l.WithField("body", string(body)).Warning("invalid token request")
+		w.WriteHeader(res.StatusCode)
+		w.Write(body)
 		return
 	}
 	var tr TokenResponse
