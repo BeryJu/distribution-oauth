@@ -1,5 +1,5 @@
 # Build application first
-FROM docker.io/golang:1.21.6 AS builder
+FROM docker.io/golang:1.22.0 AS builder
 
 ENV CGO_ENABLED=0
 ARG GIT_BUILD_HASH
